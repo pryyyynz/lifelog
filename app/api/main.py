@@ -1213,6 +1213,76 @@ def ingest_status() -> IngestStatusResponse:
         return IngestStatusResponse(**_ingest_status)
 
 
+_MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MB per file
+
+
+def _unique_path(path: Path) -> Path:
+    """Return a non-colliding path, suffixing _1, _2, … so uploads never overwrite."""
+    if not path.exists():
+        return path
+    i = 1
+    while True:
+        candidate = path.with_name(f"{path.stem}_{i}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+        i += 1
+
+
+@app.post("/ingest/upload")
+async def ingest_upload(
+    background_tasks: BackgroundTasks,
+    source_type: str = Form(...),
+    files: list[UploadFile] = File(...),
+) -> dict[str, Any]:
+    """Ingest files uploaded from a device (e.g. a phone).
+
+    Saved under ``data/uploads/<source_type>/`` which is registered as a source,
+    then ingested in the background like any local folder. This is the remote
+    counterpart to the PC's folder-path ingest — the phone can't browse the PC's
+    filesystem, so it ships the bytes instead.
+    """
+    try:
+        kind = SourceKind(source_type)
+    except ValueError as exc:
+        allowed = ", ".join(item.value for item in SourceKind)
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported source type. Use one of: {allowed}"
+        ) from exc
+
+    dest_dir = _config.paths.data_dir / "uploads" / kind.value
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    source = build_source_config(kind, dest_dir)
+
+    saved = 0
+    skipped: list[str] = []
+    for upload in files:
+        name = Path(upload.filename or "").name
+        if not name or name.startswith("."):
+            continue
+        if Path(name).suffix.lower() not in source.supported_extensions:
+            skipped.append(name)
+            continue
+        data = await upload.read()
+        if not data or len(data) > _MAX_UPLOAD_BYTES:
+            skipped.append(name)
+            continue
+        _unique_path(dest_dir / name).write_bytes(data)
+        saved += 1
+
+    if saved == 0:
+        exts = ", ".join(e for e in source.supported_extensions if e)
+        raise HTTPException(
+            status_code=400,
+            detail=f"No supported {kind.value} files in upload (expected: {exts})",
+        )
+
+    registry = SourceRegistry(_config.paths.source_registry_path)
+    registry.upsert(source)
+    registry.save()
+    background_tasks.add_task(_run_ingest_bg, False, source.id)
+    return {"status": "started", "saved": saved, "skipped": skipped, "source_id": source.id}
+
+
 @app.post("/enrich/trigger", response_model=EnrichTriggerResponse)
 def trigger_enrich(request: EnrichTriggerRequest, background_tasks: BackgroundTasks) -> EnrichTriggerResponse:
     from app.enrich.registry import build_enrichers  # noqa: PLC0415

@@ -150,6 +150,27 @@ export async function getIngestStatus(): Promise<IngestStatusResponse> {
   return res.json() as Promise<IngestStatusResponse>;
 }
 
+// Upload files from this device (e.g. a phone) to be ingested on the backend.
+export async function uploadIngest(
+  sourceType: string,
+  files: File[],
+): Promise<{ saved: number; skipped: string[]; source_id: string }> {
+  const form = new FormData();
+  form.append('source_type', sourceType);
+  for (const file of files) form.append('files', file);
+  const res = await apiFetch('/ingest/upload', { method: 'POST', body: form });
+  if (!res.ok) {
+    let detail = await res.text();
+    try {
+      detail = JSON.parse(detail).detail ?? detail;
+    } catch {
+      // keep raw text
+    }
+    throw new Error(detail || `Upload failed (${res.status})`);
+  }
+  return res.json() as Promise<{ saved: number; skipped: string[]; source_id: string }>;
+}
+
 export async function selectLocalPath(
   sourceType: string,
   target: 'file' | 'folder',

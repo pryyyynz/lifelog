@@ -1,8 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Database, FileInput, FolderOpen, FolderSearch, Loader2, X } from 'lucide-react';
-import { getIngestStatus, getStatus, mediaUrl, previewSource, selectLocalPath, triggerIngest } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import {
+  CheckCircle2,
+  Database,
+  FileInput,
+  FolderOpen,
+  FolderSearch,
+  Loader2,
+  Upload,
+  X,
+} from 'lucide-react';
+import {
+  getIngestStatus,
+  getStatus,
+  mediaUrl,
+  previewSource,
+  selectLocalPath,
+  triggerIngest,
+  uploadIngest,
+} from '@/lib/api';
+import { useIsMobile } from '@/lib/useIsMobile';
 import type { IngestStatusResponse, SourcePreviewResponse, StatusResponse } from '@/lib/types';
 
 const SOURCE_TYPES = [
@@ -15,12 +33,29 @@ const SOURCE_TYPES = [
   { value: 'browser_history', label: 'Browser history' },
 ];
 
+// On a phone you upload from the device, so only the modalities a phone actually
+// holds are offered (no email mbox / calendar ics / browser sqlite).
+const MOBILE_SOURCE_TYPES = [
+  { value: 'photos', label: 'Photos' },
+  { value: 'video', label: 'Video' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'text', label: 'Text' },
+];
+
+const ACCEPT: Record<string, string> = {
+  photos: 'image/*',
+  video: 'video/*',
+  audio: 'audio/*',
+  text: '.md,.markdown,.txt,.csv,.json',
+};
+
 interface IngestDataButtonProps {
   onStatusChange: (status: StatusResponse) => void;
   onError: (message: string) => void;
 }
 
 export default function IngestDataButton({ onStatusChange, onError }: IngestDataButtonProps) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [sourceType, setSourceType] = useState('text');
   const [path, setPath] = useState('');
@@ -30,6 +65,13 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
   const [busy, setBusy] = useState(false);
   const [selectingPath, setSelectingPath] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+
+  // On a phone, default to uploading photos (the most common case).
+  useEffect(() => {
+    if (isMobile) setSourceType('photos');
+  }, [isMobile]);
 
   useEffect(() => {
     if (!open) return;
@@ -125,6 +167,40 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
     }
   };
 
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      setMessage('Choose at least one file to upload.');
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    try {
+      const result = await uploadIngest(sourceType, files);
+      setFiles([]);
+      if (uploadInputRef.current) uploadInputRef.current.value = '';
+      setIngestStatus({
+        state: 'running',
+        message: `Uploaded ${result.saved} file${result.saved === 1 ? '' : 's'} — ingesting…`,
+        mode: 'incremental',
+        source_id: result.source_id,
+        started_at: new Date().toISOString(),
+        finished_at: null,
+        processed_items: 0,
+        skipped_items: 0,
+        failed_items: 0,
+      });
+      if (result.skipped.length > 0) {
+        setMessage(`Skipped ${result.skipped.length} unsupported file(s).`);
+      }
+    } catch (err) {
+      const text = err instanceof Error ? err.message : 'Upload failed';
+      setMessage(text);
+      onError(text);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const running = ingestStatus?.state === 'running';
   const done = ingestStatus?.state === 'done' || ingestStatus?.state === 'done_with_errors';
 
@@ -140,153 +216,228 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
       </button>
 
       {open && (
-        <div className="absolute right-0 top-9 z-20 w-[420px] rounded-xl border border-white/10 bg-gray-900/95 shadow-2xl backdrop-blur">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <div className="text-sm font-medium text-gray-100">Ingest data</div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded p-1 text-gray-500 hover:bg-gray-800 hover:text-gray-200"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="space-y-4 px-4 py-4">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="space-y-1 text-xs text-gray-400">
-                Data type
-                <select
-                  value={sourceType}
-                  onChange={(event) => {
-                    setSourceType(event.target.value);
-                    setPreview(null);
-                    setMessage(null);
-                  }}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-gray-100"
-                >
-                  {SOURCE_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="space-y-1 text-xs text-gray-400">
-                Sync mode
-                <select
-                  value={full ? 'full' : 'incremental'}
-                  onChange={(event) => setFull(event.target.value === 'full')}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-gray-100"
-                >
-                  <option value="incremental">Partial sync</option>
-                  <option value="full">Full ingest</option>
-                </select>
-              </label>
-            </div>
-
-            <label className="space-y-1 text-xs text-gray-400">
-              Local file or folder path
-              <div className="flex gap-2">
-                <input
-                  value={path}
-                  onChange={(event) => {
-                    setPath(event.target.value);
-                    setPreview(null);
-                    setMessage(null);
-                  }}
-                  onDoubleClick={() => handleSelectPath('folder')}
-                  placeholder="C:\\Users\\pryyy\\Pictures\\Screenshots"
-                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 placeholder-gray-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSelectPath('folder')}
-                  disabled={busy || running || selectingPath}
-                  title="Browse for folder"
-                  className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 text-gray-300 hover:bg-white/10 disabled:opacity-50"
-                >
-                  {selectingPath ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="h-4 w-4" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectPath('file')}
-                  disabled={busy || running || selectingPath}
-                  title="Browse for file"
-                  className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 text-gray-300 hover:bg-white/10 disabled:opacity-50"
-                >
-                  <FileInput className="h-4 w-4" />
-                </button>
+        <>
+          {/* Mobile backdrop so the sheet reads as a modal */}
+          <div className="fixed inset-0 z-20 bg-black/50 md:hidden" onClick={() => setOpen(false)} />
+          <div className="fixed inset-x-3 top-16 z-30 max-h-[80vh] overflow-y-auto rounded-xl border border-white/10 bg-gray-900/95 shadow-2xl backdrop-blur md:absolute md:inset-x-auto md:right-0 md:top-9 md:max-h-none md:w-[420px] md:overflow-visible">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div className="text-sm font-medium text-gray-100">
+                {isMobile ? 'Upload from this phone' : 'Ingest data'}
               </div>
-            </label>
-
-            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handlePreview}
-                disabled={busy || running || selectingPath}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200 transition hover:bg-white/10 disabled:opacity-50"
+                onClick={() => setOpen(false)}
+                className="rounded p-1 text-gray-500 hover:bg-gray-800 hover:text-gray-200"
               >
-                <FolderSearch className="h-4 w-4" />
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={handleIngest}
-                disabled={busy || running || selectingPath}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 px-3 py-2 text-xs font-medium text-white shadow-md transition hover:from-indigo-400 hover:to-violet-400 disabled:opacity-50"
-              >
-                {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                {full ? 'Run full ingest' : 'Run partial sync'}
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            {preview && (
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>{preview.item_count} matching files</span>
-                  <span>{preview.ok ? 'Ready' : 'Invalid source'}</span>
-                </div>
-                {preview.warnings.length > 0 && (
-                  <div className="mt-2 text-xs text-amber-300">{preview.warnings.join('; ')}</div>
-                )}
-                {sourceType === 'photos' ? (
-                  <div className="mt-3 grid grid-cols-4 gap-2">
-                    {preview.files.map((file) => (
-                      <div key={file.path} className="aspect-square overflow-hidden rounded border border-gray-800 bg-gray-800">
-                        {file.preview_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={mediaUrl(file.preview_url)} alt={file.name} className="h-full w-full object-cover" />
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-3 max-h-36 space-y-1 overflow-y-auto text-xs text-gray-500">
-                    {preview.files.map((file) => (
-                      <div key={file.path} className="truncate" title={file.path}>
-                        {file.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="space-y-4 px-4 py-4">
+              {isMobile ? (
+                <>
+                  <label className="block space-y-1 text-xs text-gray-400">
+                    Data type
+                    <select
+                      value={sourceType}
+                      onChange={(event) => {
+                        setSourceType(event.target.value);
+                        setFiles([]);
+                        setMessage(null);
+                        if (uploadInputRef.current) uploadInputRef.current.value = '';
+                      }}
+                      className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-gray-100"
+                    >
+                      {MOBILE_SOURCE_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-            {(running || done || ingestStatus?.state === 'error') && (
-              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-gray-300">
-                <div className="flex items-center gap-2">
-                  {running && <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />}
-                  {done && <CheckCircle2 className="h-4 w-4 text-emerald-300" />}
-                  <span>{ingestStatus?.message}</span>
-                </div>
-              </div>
-            )}
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    multiple
+                    accept={ACCEPT[sourceType] ?? '*'}
+                    className="hidden"
+                    onChange={(event) => {
+                      setFiles(Array.from(event.target.files ?? []));
+                      setMessage(null);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => uploadInputRef.current?.click()}
+                    disabled={busy || running}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-sm text-gray-200 transition hover:bg-white/10 disabled:opacity-50"
+                  >
+                    <FileInput className="h-4 w-4" />
+                    {files.length > 0
+                      ? `${files.length} file${files.length === 1 ? '' : 's'} selected`
+                      : 'Choose from your device'}
+                  </button>
 
-            {message && <div className="text-xs text-red-300">{message}</div>}
+                  {files.length > 0 && (
+                    <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-2 text-xs text-gray-500">
+                      {files.map((file) => (
+                        <div key={file.name} className="truncate" title={file.name}>
+                          {file.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={busy || running || files.length === 0}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 px-3 py-2.5 text-sm font-medium text-white shadow-md transition hover:from-indigo-400 hover:to-violet-400 disabled:opacity-50"
+                  >
+                    {busy || running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload &amp; ingest
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1 text-xs text-gray-400">
+                      Data type
+                      <select
+                        value={sourceType}
+                        onChange={(event) => {
+                          setSourceType(event.target.value);
+                          setPreview(null);
+                          setMessage(null);
+                        }}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-gray-100"
+                      >
+                        {SOURCE_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="space-y-1 text-xs text-gray-400">
+                      Sync mode
+                      <select
+                        value={full ? 'full' : 'incremental'}
+                        onChange={(event) => setFull(event.target.value === 'full')}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-gray-100"
+                      >
+                        <option value="incremental">Partial sync</option>
+                        <option value="full">Full ingest</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="space-y-1 text-xs text-gray-400">
+                    Local file or folder path
+                    <div className="flex gap-2">
+                      <input
+                        value={path}
+                        onChange={(event) => {
+                          setPath(event.target.value);
+                          setPreview(null);
+                          setMessage(null);
+                        }}
+                        onDoubleClick={() => handleSelectPath('folder')}
+                        placeholder="C:\\Users\\pryyy\\Pictures\\Screenshots"
+                        className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 placeholder-gray-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPath('folder')}
+                        disabled={busy || running || selectingPath}
+                        title="Browse for folder"
+                        className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 text-gray-300 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {selectingPath ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPath('file')}
+                        disabled={busy || running || selectingPath}
+                        title="Browse for file"
+                        className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 text-gray-300 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        <FileInput className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePreview}
+                      disabled={busy || running || selectingPath}
+                      className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200 transition hover:bg-white/10 disabled:opacity-50"
+                    >
+                      <FolderSearch className="h-4 w-4" />
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleIngest}
+                      disabled={busy || running || selectingPath}
+                      className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 px-3 py-2 text-xs font-medium text-white shadow-md transition hover:from-indigo-400 hover:to-violet-400 disabled:opacity-50"
+                    >
+                      {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                      {full ? 'Run full ingest' : 'Run partial sync'}
+                    </button>
+                  </div>
+
+                  {preview && (
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>{preview.item_count} matching files</span>
+                        <span>{preview.ok ? 'Ready' : 'Invalid source'}</span>
+                      </div>
+                      {preview.warnings.length > 0 && (
+                        <div className="mt-2 text-xs text-amber-300">{preview.warnings.join('; ')}</div>
+                      )}
+                      {sourceType === 'photos' ? (
+                        <div className="mt-3 grid grid-cols-4 gap-2">
+                          {preview.files.map((file) => (
+                            <div key={file.path} className="aspect-square overflow-hidden rounded border border-gray-800 bg-gray-800">
+                              {file.preview_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={mediaUrl(file.preview_url)} alt={file.name} className="h-full w-full object-cover" />
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-3 max-h-36 space-y-1 overflow-y-auto text-xs text-gray-500">
+                          {preview.files.map((file) => (
+                            <div key={file.path} className="truncate" title={file.path}>
+                              {file.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {(running || done || ingestStatus?.state === 'error') && (
+                <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-gray-300">
+                  <div className="flex items-center gap-2">
+                    {running && <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />}
+                    {done && <CheckCircle2 className="h-4 w-4 text-emerald-300" />}
+                    <span>{ingestStatus?.message}</span>
+                  </div>
+                </div>
+              )}
+
+              {message && <div className="text-xs text-red-300">{message}</div>}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

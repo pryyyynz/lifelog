@@ -9,6 +9,7 @@ import {
   Copy,
   Layers,
   LogOut,
+  Menu,
   MessageSquare,
   Pencil,
   Plus,
@@ -460,6 +461,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [composerText, setComposerText] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -649,11 +651,13 @@ export default function Home() {
     setActiveChatId(chat.id);
     setComposerText('');
     setError(null);
+    setSidebarOpen(false);
   };
 
   const handleSelectChat = (chatId: string) => {
     setActiveChatId(chatId);
     setError(null);
+    setSidebarOpen(false);
   };
 
   // Edit a past request in place: replace its query, drop the turns that came
@@ -727,7 +731,18 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-transparent text-gray-100">
-      <aside className="flex w-72 shrink-0 flex-col border-r border-white/10 bg-gray-950/60 backdrop-blur">
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 transform flex-col border-r border-white/10 bg-gray-950/95 backdrop-blur transition-transform duration-200 md:static md:z-auto md:translate-x-0 md:bg-gray-950/60 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="flex items-center gap-2.5 px-4 py-4">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md">
             <Sparkles className="h-4 w-4" />
@@ -798,8 +813,16 @@ export default function Home() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-gray-950/40 px-6 py-3 backdrop-blur">
-          <div className="min-w-0">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-gray-950/40 px-4 py-3 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="-ml-1 shrink-0 rounded-lg p-1.5 text-gray-300 transition hover:bg-white/10 hover:text-gray-100 md:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
             <div className="truncate text-base font-semibold text-gray-100">
               {activeChat?.title ?? 'Life Log Search'}
             </div>
