@@ -25,7 +25,7 @@ from app.storage.metadata import MetadataStore
 try:
     from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, JSONResponse
     from pydantic import BaseModel, Field
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("Install API dependencies with `pip install -e .` before running the API.") from exc
@@ -184,6 +184,37 @@ async def _track_query_activity(request, call_next):
         if is_query:
             with _active_query_lock:
                 _active_query_count -= 1
+
+
+# Endpoints reachable without a token. Everything else requires auth when a
+# password is configured. ``/auth/status`` lets the UI decide whether to show
+# the login screen; ``/auth/login`` mints the token.
+_AUTH_ALLOWLIST = {"/auth/login", "/auth/status"}
+
+
+@app.middleware("http")
+async def _require_auth(request, call_next):
+    """Reject unauthenticated requests when a login password is configured.
+
+    The token may arrive as ``Authorization: Bearer <t>`` (fetch calls) or as a
+    ``?token=`` query param (``<img>``/``<video>`` media tags can't set headers).
+    """
+    if not _config.auth.enabled:
+        return await call_next(request)
+    if request.method == "OPTIONS" or request.url.path.rstrip("/") in _AUTH_ALLOWLIST:
+        return await call_next(request)
+
+    from app.api.auth import verify_token  # noqa: PLC0415
+
+    token = None
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        token = header[7:].strip()
+    if not token:
+        token = request.query_params.get("token")
+    if not token or not verify_token(_config.auth.secret, token):
+        return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+    return await call_next(request)
 
 # ---------------------------------------------------------------------------
 # Request / response schemas
@@ -681,6 +712,33 @@ def _select_local_path(source_type: SourceKind, target: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+class LoginRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=500)
+
+
+class LoginResponse(BaseModel):
+    token: str
+
+
+@app.get("/auth/status")
+def auth_status() -> dict[str, bool]:
+    """Tell the UI whether a login is required (no token needed to ask)."""
+    return {"auth_required": _config.auth.enabled}
+
+
+@app.post("/auth/login", response_model=LoginResponse)
+def auth_login(request: LoginRequest) -> LoginResponse:
+    import hmac as _hmac  # noqa: PLC0415
+
+    from app.api.auth import create_token  # noqa: PLC0415
+
+    if not _config.auth.enabled:
+        raise HTTPException(status_code=400, detail="Login is not configured on the server.")
+    if not _hmac.compare_digest(request.password, _config.auth.password or ""):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    return LoginResponse(token=create_token(_config.auth.secret, _config.auth.ttl_seconds))
 
 
 @app.get("/status", response_model=StatusResponse)

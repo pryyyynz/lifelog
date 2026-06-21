@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 DEFAULT_MODALITIES = (
     "text",
@@ -18,6 +20,10 @@ DEFAULT_MODALITIES = (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Load ./.env once at import so os.getenv below sees it. Real environment
+# variables take precedence (override=False) so launchers can still override.
+load_dotenv(PROJECT_ROOT / ".env")
 
 
 def _path_from_env(name: str, default: str) -> Path:
@@ -174,6 +180,28 @@ class ProactiveConfig:
 
 
 @dataclass(frozen=True)
+class AuthConfig:
+    """Single-user web login. Auth is OFF unless a password is set."""
+
+    password: str | None = field(
+        default_factory=lambda: os.getenv("LIFELOG_AUTH_PASSWORD") or None
+    )
+    # Token signing key; falls back to the password so a single setting suffices.
+    secret: str = field(
+        default_factory=lambda: os.getenv("LIFELOG_AUTH_SECRET")
+        or os.getenv("LIFELOG_AUTH_PASSWORD")
+        or ""
+    )
+    ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("LIFELOG_AUTH_TTL_SECONDS", str(60 * 60 * 24 * 30)))
+    )
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.password)
+
+
+@dataclass(frozen=True)
 class SchedulerConfig:
     engine: str = os.getenv("LIFELOG_SCHEDULER", "apscheduler")
     file_watcher: str = os.getenv("LIFELOG_FILE_WATCHER", "watchdog")
@@ -198,6 +226,7 @@ class AppConfig:
     enrichment: EnrichmentConfig = field(default_factory=EnrichmentConfig)
     proactive: ProactiveConfig = field(default_factory=ProactiveConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)
 
     def ensure_directories(self) -> None:
         self.paths.data_dir.mkdir(parents=True, exist_ok=True)

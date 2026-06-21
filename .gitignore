@@ -14,3 +14,4 @@ tools/
 .DS_Store
 .hypothesis/
 .claude/scheduled_tasks.lock
+*.tsbuildinfo

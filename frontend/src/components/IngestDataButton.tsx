@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Database, FileInput, FolderOpen, FolderSearch, Loader2, X } from 'lucide-react';
-import { getIngestStatus, getStatus, previewSource, selectLocalPath, triggerIngest } from '@/lib/api';
+import { getIngestStatus, getStatus, mediaUrl, previewSource, selectLocalPath, triggerIngest } from '@/lib/api';
 import type { IngestStatusResponse, SourcePreviewResponse, StatusResponse } from '@/lib/types';
 
 const SOURCE_TYPES = [
@@ -257,7 +257,7 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
                       <div key={file.path} className="aspect-square overflow-hidden rounded border border-gray-800 bg-gray-800">
                         {file.preview_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={file.preview_url} alt={file.name} className="h-full w-full object-cover" />
+                          <img src={mediaUrl(file.preview_url)} alt={file.name} className="h-full w-full object-cover" />
                         ) : null}
                       </div>
                     ))}

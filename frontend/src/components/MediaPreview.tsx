@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import type { HitOut } from '@/lib/types';
+import { mediaUrl } from '@/lib/api';
 import Lightbox from './Lightbox';
 
 // Renders a hit's media so it can be viewed/played right inside the chat.
 // Images open a full-screen lightbox; video and audio play inline.
 export default function MediaPreview({ hit, onOpenOriginal }: { hit: HitOut; onOpenOriginal?: () => void }) {
   const [lightbox, setLightbox] = useState(false);
-  const url = hit.preview_url;
+  const url = hit.preview_url ? mediaUrl(hit.preview_url) : null;
   const name = hit.file_path.split(/[\\/]/).pop() ?? 'file';
 
   if (!url) return null;

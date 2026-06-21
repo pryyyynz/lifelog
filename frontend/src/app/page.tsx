@@ -8,6 +8,7 @@ import {
   Clock,
   Copy,
   Layers,
+  LogOut,
   MessageSquare,
   Pencil,
   Plus,
@@ -15,7 +16,7 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react';
-import { runQuery, runImageQuery, getStatus } from '@/lib/api';
+import { runQuery, runImageQuery, getStatus, getToken, logout } from '@/lib/api';
 import { chatTitleFromQuery, createChat, loadChats, saveChats } from '@/lib/chatStorage';
 import type { ChatRecord, ConversationTurn, QueryResponse, StatusResponse, QueryFilters } from '@/lib/types';
 import IngestDataButton from '@/components/IngestDataButton';
@@ -781,6 +782,19 @@ export default function Home() {
             })
           )}
         </div>
+
+        {hydrated && getToken() && (
+          <div className="border-t border-white/10 p-3">
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+            >
+              <LogOut className="h-4 w-4" />
+              Log out
+            </button>
+          </div>
+        )}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
