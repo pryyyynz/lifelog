@@ -139,8 +139,16 @@ class Retriever:
             if run_clip:
                 clip_vec = self._embed_query_clip(query)
                 if clip_vec is not None:
-                    for col in _IMAGE_COLLECTIONS:
-                        results = self._vs.search(col, clip_vec, limit=limit)
+                    # Respect a visual-type lock so a "photo" filter doesn't return
+                    # video frames (and vice versa); pass filters as a safety net.
+                    if locked_source_type == "photo":
+                        image_cols: tuple[str, ...] = ("image_frames",)
+                    elif locked_source_type == "video":
+                        image_cols = ("video_frames",)
+                    else:
+                        image_cols = tuple(_IMAGE_COLLECTIONS)
+                    for col in image_cols:
+                        results = self._vs.search(col, clip_vec, limit=limit, filters=filters)
                         if results:
                             ranked_lists[f"clip_{col}"] = [
                                 (r["payload"].get("chunk_id", r["id"]), r["score"])

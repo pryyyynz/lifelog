@@ -22,7 +22,7 @@ export default function StatusBar({ status }: { status: StatusResponse }) {
           <span key={key} className="flex shrink-0 items-center gap-1.5">
             <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
             <span className="text-gray-400">{meta.label}</span>
-            <span className="text-gray-300">{(status.chunks_by_modality[key] ?? 0).toLocaleString()}</span>
+            <span className="text-gray-300">{(status.files_by_modality?.[key] ?? 0).toLocaleString()}</span>
           </span>
         );
       })}

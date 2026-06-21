@@ -74,6 +74,7 @@ export interface StatusResponse {
   api_port: number;
   total_chunks: number;
   chunks_by_modality: Record<string, number>;
+  files_by_modality: Record<string, number>;
   last_ingest_timestamp: string | null;
   sqlite_path?: string;
   vector_store_mode?: string;

@@ -640,6 +640,19 @@ class MetadataStore:
             ).fetchall()
         return {str(row["source_type"]): int(row["count"]) for row in rows}
 
+    def file_counts_by_source_type(self) -> dict[str, int]:
+        """Count distinct files (not chunks) per source_type.
+
+        A video is many chunks (keyframes + transcript segments) but one file, so
+        chunk counts overstate it; the UI shows these item counts instead.
+        """
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT source_type, COUNT(DISTINCT file_path) AS count"
+                " FROM chunks GROUP BY source_type"
+            ).fetchall()
+        return {str(row["source_type"]): int(row["count"]) for row in rows}
+
     def latest_ingest_timestamp(self) -> datetime | None:
         with self._connect() as connection:
             row = connection.execute(

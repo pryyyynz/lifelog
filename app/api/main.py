@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -284,6 +285,7 @@ class StatusResponse(BaseModel):
     api_port: int
     total_chunks: int
     chunks_by_modality: dict[str, int]
+    files_by_modality: dict[str, int]
     last_ingest_timestamp: str | None
     sqlite_path: str
     vector_store_mode: str
@@ -745,6 +747,7 @@ def auth_login(request: LoginRequest) -> LoginResponse:
 def get_status() -> StatusResponse:
     assert _store is not None
     counts = _store.chunk_counts_by_source_type()
+    file_counts = _store.file_counts_by_source_type()
     latest = _store.latest_ingest_timestamp()
     return StatusResponse(
         status="ok",
@@ -753,6 +756,7 @@ def get_status() -> StatusResponse:
         api_port=_config.api_port,
         total_chunks=sum(counts.values()),
         chunks_by_modality=counts,
+        files_by_modality=file_counts,
         last_ingest_timestamp=latest.isoformat() if latest else None,
         sqlite_path=str(_config.paths.sqlite_path),
         vector_store_mode=_config.vector_store.mode,
@@ -807,6 +811,35 @@ def select_local_path(request: LocalPathSelectRequest) -> LocalPathSelectRespons
     return LocalPathSelectResponse(path=_select_local_path(source_type, request.target))
 
 
+_COUNT_RE = re.compile(r"\b(how many|how much|number of|count of|total number)\b", re.IGNORECASE)
+_COUNT_MODALITY_WORDS: dict[str, tuple[str, ...]] = {
+    "photo": ("photo", "photos", "picture", "pictures", "image", "images", "screenshot", "screenshots"),
+    "video": ("video", "videos", "clip", "clips", "recording", "recordings"),
+    "text": ("document", "documents", "note", "notes", "doc", "docs", "markdown", "file", "files"),
+    "audio": ("audio", "voice", "podcast", "song", "songs"),
+}
+_COUNT_LABELS = {"photo": "photos", "video": "videos", "text": "documents", "audio": "audio files"}
+
+
+def _maybe_count_answer(query: str, store: MetadataStore) -> str | None:
+    """Answer a 'how many X' question from DB item counts instead of retrieving.
+
+    Retrieval can't aggregate, so meta questions used to return noisy CLIP hits.
+    Counts are by distinct file, so "how many videos" returns 3, not 30 chunks.
+    """
+    if not _COUNT_RE.search(query):
+        return None
+    counts = store.file_counts_by_source_type()
+    ql = query.lower()
+    for canonical, words in _COUNT_MODALITY_WORDS.items():
+        if any(re.search(rf"\b{re.escape(word)}\b", ql) for word in words):
+            return f"You have {counts.get(canonical, 0):,} {_COUNT_LABELS[canonical]} indexed."
+    parts = [f"{counts.get(k, 0):,} {lbl}" for k, lbl in _COUNT_LABELS.items() if counts.get(k, 0)]
+    if not parts:
+        return None
+    return f"You have {sum(counts.values()):,} items indexed — " + ", ".join(parts) + "."
+
+
 @app.post("/query", response_model=QueryResponse)
 def post_query(request: QueryRequest) -> QueryResponse:
     assert _store is not None
@@ -829,6 +862,24 @@ def post_query(request: QueryRequest) -> QueryResponse:
                 f"  {i + 1}. {o}" for i, o in enumerate(ctx.clarification_options)
             ),
             query_debug={"clarification_needed": True, "options": ctx.clarification_options},
+        )
+
+    # Aggregate questions ("how many photos?") are answered from counts, not retrieval.
+    count_message = _maybe_count_answer(ctx.effective_query, _store)
+    if count_message is not None:
+        _conv_manager.store_turn(
+            conv_id=conv_id,
+            query=request.query,
+            temporal_range=None,
+            session_ids=[],
+            place_names=[],
+            result_count=0,
+        )
+        return QueryResponse(
+            sessions=[],
+            conversation_id=conv_id,
+            chat_message=count_message,
+            query_debug={"intent": "count"},
         )
 
     has_filters = bool(
