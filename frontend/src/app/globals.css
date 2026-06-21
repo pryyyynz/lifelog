@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 9 11 18;
+    --surface: 31 41 55;
+    --border: 55 65 81;
+    --text: 243 244 246;
+    --muted: 156 163 175;
+    --accent: 99 102 241;
+    --accent-hover: 129 140 248;
+  }
+
+  body {
+    @apply bg-gray-950 text-gray-100 font-sans antialiased;
+    background-image:
+      radial-gradient(55rem 55rem at 105% -10%, rgba(99, 102, 241, 0.14), transparent 60%),
+      radial-gradient(45rem 45rem at -10% 110%, rgba(139, 92, 246, 0.1), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(99, 102, 241, 0.4);
+  }
+}
+
+@layer utilities {
+  /* Slim, subtle scrollbars that match the dark glass surfaces. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.24);
+    background-clip: padding-box;
+  }
+}
