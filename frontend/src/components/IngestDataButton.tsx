@@ -33,20 +33,26 @@ const SOURCE_TYPES = [
   { value: 'browser_history', label: 'Browser history' },
 ];
 
-// On a phone you upload from the device, so only the modalities a phone actually
-// holds are offered (no email mbox / calendar ics / browser sqlite).
+// On a phone you upload from the device. "Auto" lets you pick anything and the
+// backend routes each file to the right ingestor by its extension.
 const MOBILE_SOURCE_TYPES = [
+  { value: 'auto', label: 'Auto (detect by file)' },
   { value: 'photos', label: 'Photos' },
   { value: 'video', label: 'Video' },
   { value: 'audio', label: 'Audio' },
   { value: 'text', label: 'Text' },
+  { value: 'calendar', label: 'Calendar (.ics)' },
+  { value: 'email', label: 'Email (.mbox)' },
 ];
 
 const ACCEPT: Record<string, string> = {
+  auto: '', // no filter — pick anything; the backend routes by extension
   photos: 'image/*',
   video: 'video/*',
   audio: 'audio/*',
   text: '.md,.markdown,.txt,.csv,.json',
+  calendar: '.ics',
+  email: '.mbox',
 };
 
 interface IngestDataButtonProps {
@@ -68,9 +74,9 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
   const [files, setFiles] = useState<File[]>([]);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  // On a phone, default to uploading photos (the most common case).
+  // On a phone, default to auto-detect so any shared file just works.
   useEffect(() => {
-    if (isMobile) setSourceType('photos');
+    if (isMobile) setSourceType('auto');
   }, [isMobile]);
 
   useEffect(() => {
@@ -182,7 +188,7 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
         state: 'running',
         message: `Uploaded ${result.saved} file${result.saved === 1 ? '' : 's'} — ingesting…`,
         mode: 'incremental',
-        source_id: result.source_id,
+        source_id: null,
         started_at: new Date().toISOString(),
         finished_at: null,
         processed_items: 0,
@@ -260,7 +266,7 @@ export default function IngestDataButton({ onStatusChange, onError }: IngestData
                     ref={uploadInputRef}
                     type="file"
                     multiple
-                    accept={ACCEPT[sourceType] ?? '*'}
+                    accept={ACCEPT[sourceType] || undefined}
                     className="hidden"
                     onChange={(event) => {
                       setFiles(Array.from(event.target.files ?? []));

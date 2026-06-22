@@ -15,7 +15,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from app.config import get_config
-from app.ingest.registry import SourceKind, SourceRegistry, build_source_config, validate_source
+from app.ingest.registry import (
+    SUPPORTED_EXTENSIONS,
+    SourceKind,
+    SourceRegistry,
+    build_source_config,
+    validate_source,
+)
 from app.ranking.grouper import SessionGrouper
 from app.ranking.reranker import CrossEncoderReranker, TemporalReranker
 from app.retrieval.conversation import ConversationManager
@@ -1266,6 +1272,16 @@ def ingest_status() -> IngestStatusResponse:
 
 _MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MB per file
 
+# Reverse map: file extension → the SourceKind that ingests it. Lets uploads
+# (and the share sheet) auto-route each file by its extension. "" (browser
+# history's extensionless DB) is excluded — it can't be inferred from a name.
+_EXT_TO_KIND: dict[str, SourceKind] = {
+    ext: kind
+    for kind, exts in SUPPORTED_EXTENSIONS.items()
+    for ext in exts
+    if ext
+}
+
 
 def _unique_path(path: Path) -> Path:
     """Return a non-colliding path, suffixing _1, _2, … so uploads never overwrite."""
@@ -1279,6 +1295,12 @@ def _unique_path(path: Path) -> Path:
         i += 1
 
 
+def _run_ingest_sources_bg(source_ids: list[str]) -> None:
+    """Incrementally ingest each given source in turn (used after an upload)."""
+    for source_id in source_ids:
+        _run_ingest_bg(full=False, source_id=source_id)
+
+
 @app.post("/ingest/upload")
 async def ingest_upload(
     background_tasks: BackgroundTasks,
@@ -1287,51 +1309,61 @@ async def ingest_upload(
 ) -> dict[str, Any]:
     """Ingest files uploaded from a device (e.g. a phone).
 
-    Saved under ``data/uploads/<source_type>/`` which is registered as a source,
-    then ingested in the background like any local folder. This is the remote
-    counterpart to the PC's folder-path ingest — the phone can't browse the PC's
-    filesystem, so it ships the bytes instead.
+    ``source_type="auto"`` routes each file to the right ingestor by its
+    extension (so the OS share sheet can dump mixed files); otherwise every file
+    is treated as the given type. Files land under ``data/uploads/<kind>/``,
+    each dir is registered as a source, then ingested in the background — the
+    remote counterpart to the PC's folder-path ingest.
     """
-    try:
-        kind = SourceKind(source_type)
-    except ValueError as exc:
-        allowed = ", ".join(item.value for item in SourceKind)
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported source type. Use one of: {allowed}"
-        ) from exc
+    auto = source_type == "auto"
+    forced_kind: SourceKind | None = None
+    if not auto:
+        try:
+            forced_kind = SourceKind(source_type)
+        except ValueError as exc:
+            allowed = "auto, " + ", ".join(item.value for item in SourceKind)
+            raise HTTPException(
+                status_code=400, detail=f"Unsupported source type. Use one of: {allowed}"
+            ) from exc
 
-    dest_dir = _config.paths.data_dir / "uploads" / kind.value
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    source = build_source_config(kind, dest_dir)
-
-    saved = 0
+    saved_by_kind: dict[SourceKind, int] = {}
     skipped: list[str] = []
     for upload in files:
         name = Path(upload.filename or "").name
         if not name or name.startswith("."):
             continue
-        if Path(name).suffix.lower() not in source.supported_extensions:
+        ext = Path(name).suffix.lower()
+        kind = _EXT_TO_KIND.get(ext) if auto else forced_kind
+        if kind is None or ext not in SUPPORTED_EXTENSIONS[kind]:
             skipped.append(name)
             continue
         data = await upload.read()
         if not data or len(data) > _MAX_UPLOAD_BYTES:
             skipped.append(name)
             continue
+        dest_dir = _config.paths.data_dir / "uploads" / kind.value
+        dest_dir.mkdir(parents=True, exist_ok=True)
         _unique_path(dest_dir / name).write_bytes(data)
-        saved += 1
+        saved_by_kind[kind] = saved_by_kind.get(kind, 0) + 1
 
-    if saved == 0:
-        exts = ", ".join(e for e in source.supported_extensions if e)
-        raise HTTPException(
-            status_code=400,
-            detail=f"No supported {kind.value} files in upload (expected: {exts})",
-        )
+    if not saved_by_kind:
+        hint = "recognized file types" if auto else f"{source_type} files"
+        raise HTTPException(status_code=400, detail=f"No {hint} in upload.")
 
     registry = SourceRegistry(_config.paths.source_registry_path)
-    registry.upsert(source)
+    source_ids: list[str] = []
+    for kind in saved_by_kind:
+        source = build_source_config(kind, _config.paths.data_dir / "uploads" / kind.value)
+        registry.upsert(source)
+        source_ids.append(source.id)
     registry.save()
-    background_tasks.add_task(_run_ingest_bg, False, source.id)
-    return {"status": "started", "saved": saved, "skipped": skipped, "source_id": source.id}
+    background_tasks.add_task(_run_ingest_sources_bg, source_ids)
+    return {
+        "status": "started",
+        "saved": sum(saved_by_kind.values()),
+        "skipped": skipped,
+        "by_type": {k.value: v for k, v in saved_by_kind.items()},
+    }
 
 
 @app.post("/enrich/trigger", response_model=EnrichTriggerResponse)

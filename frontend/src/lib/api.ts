@@ -154,7 +154,7 @@ export async function getIngestStatus(): Promise<IngestStatusResponse> {
 export async function uploadIngest(
   sourceType: string,
   files: File[],
-): Promise<{ saved: number; skipped: string[]; source_id: string }> {
+): Promise<{ saved: number; skipped: string[]; by_type?: Record<string, number> }> {
   const form = new FormData();
   form.append('source_type', sourceType);
   for (const file of files) form.append('files', file);
@@ -168,7 +168,7 @@ export async function uploadIngest(
     }
     throw new Error(detail || `Upload failed (${res.status})`);
   }
-  return res.json() as Promise<{ saved: number; skipped: string[]; source_id: string }>;
+  return res.json() as Promise<{ saved: number; skipped: string[]; by_type?: Record<string, number> }>;
 }
 
 export async function selectLocalPath(
