@@ -8,8 +8,17 @@ at construction time so the caller can fall back to ``GENERIC_FALLBACK``.
 from __future__ import annotations
 
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+# Qwen3 (and other reasoning models) can wrap chain-of-thought in <think>…</think>.
+# Ollama usually routes it to a separate `thinking` field, but strip defensively.
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def _strip_think(text: str) -> str:
+    return _THINK_RE.sub("", text)
 
 
 class LLMUnavailableError(RuntimeError):
@@ -83,16 +92,27 @@ class OllamaClient:
         Falls back to an empty string on any error so the caller can decide
         whether to use ``GENERIC_FALLBACK``.
         """
+        messages = [
+            {"role": "system", "content": system or self._system_prompt},
+            {"role": "user", "content": prompt},
+        ]
         try:
-            response = self._client.chat(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": system or self._system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
-                options={"num_predict": num_predict},
-            )
-            return response["message"]["content"].strip()
+            # think=False keeps reasoning models (qwen3) snappy and spends the
+            # whole num_predict budget on the answer. Fall back for older clients.
+            try:
+                response = self._client.chat(
+                    model=self._model,
+                    messages=messages,
+                    think=False,
+                    options={"num_predict": num_predict},
+                )
+            except TypeError:
+                response = self._client.chat(
+                    model=self._model,
+                    messages=messages,
+                    options={"num_predict": num_predict},
+                )
+            return _strip_think(response["message"]["content"]).strip()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Ollama generate failed: %s", exc)
             return ""
