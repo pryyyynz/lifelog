@@ -111,15 +111,16 @@ class Retriever:
         if self._vs is not None and getattr(self._vs, "available", False):
             text_vec = self._embed_query_text(query)
             if text_vec is not None:
-                # Text/audio dense search — always run unless locked to a visual-only type
-                if locked_source_type is None or locked_source_type not in _VISUAL_SOURCE_TYPES:
-                    for col in _TEXT_COLLECTIONS:
-                        results = self._vs.search(col, text_vec, limit=limit, filters=filters)
-                        if results:
-                            ranked_lists[f"dense_{col}"] = [
-                                (r["payload"].get("chunk_id", r["id"]), r["score"])
-                                for r in results
-                            ]
+                # Dense text/transcript search. Photos now carry OCR-derived text
+                # chunks (source_type=photo), so run this even under a photo/video
+                # lock — the source_type filter keeps results within the locked type.
+                for col in _TEXT_COLLECTIONS:
+                    results = self._vs.search(col, text_vec, limit=limit, filters=filters)
+                    if results:
+                        ranked_lists[f"dense_{col}"] = [
+                            (r["payload"].get("chunk_id", r["id"]), r["score"])
+                            for r in results
+                        ]
 
             # CLIP text-to-image: fire when visual/video intent is detected OR when
             # no source_type filter is set (cross-modal: a text query may match photos)

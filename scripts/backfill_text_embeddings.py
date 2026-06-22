@@ -23,9 +23,9 @@ def _collection_for(row) -> str | None:
     ident = (row["chunk_identity"] or "")
     if ident.startswith(("video_transcript", "audio")) or row["source_type"] == "audio":
         return "audio_transcripts"
-    if row["source_type"] == "text":
-        return "text_chunks"
-    return None
+    # Text docs AND derived text (OCR/caption/tags on photos/videos) → text_chunks.
+    # The caller only passes rows that carry embedding_text, so this is safe.
+    return "text_chunks"
 
 
 def main() -> int:
