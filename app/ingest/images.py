@@ -160,18 +160,23 @@ class OpenClipImageEmbedder:
             return None
 
         try:
-            model, _, preprocess = open_clip.create_model_and_transforms(
-                self.model_name,
-                pretrained=self.pretrained,
-            )
-            model.eval()
+            # Load the model once (on GPU when available) and cache it — recreating
+            # it per image was both slow and CPU-only.
+            if getattr(self, "_model", None) is None:
+                self._device = "cuda" if torch.cuda.is_available() else "cpu"
+                self._model, _, self._preprocess = open_clip.create_model_and_transforms(
+                    self.model_name,
+                    pretrained=self.pretrained,
+                )
+                self._model.to(self._device)
+                self._model.eval()
             image = Image.open(path).convert("RGB").resize((224, 224))
-            tensor = preprocess(image).unsqueeze(0)
+            tensor = self._preprocess(image).unsqueeze(0).to(self._device)
             with torch.no_grad():
-                features = model.encode_image(tensor)
+                features = self._model.encode_image(tensor)
                 features = features / features.norm(dim=-1, keepdim=True)
             self.status = "ok"
-            return [float(value) for value in features.squeeze(0).tolist()]
+            return [float(value) for value in features.squeeze(0).cpu().tolist()]
         except Exception as exc:  # noqa: BLE001
             self.status = f"embedding_error: {exc}"
             return None

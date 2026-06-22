@@ -51,6 +51,16 @@ _VISUAL_SOURCE_TYPES = frozenset({"photo", "video"})
 _AUDIO_SOURCE_TYPES = frozenset({"audio"})
 
 
+def _torch_device() -> str:
+    """Return 'cuda' when a GPU is available to torch, else 'cpu'."""
+    try:
+        import torch  # noqa: PLC0415
+
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:  # noqa: BLE001
+        return "cpu"
+
+
 class Retriever:
     """Hybrid retriever combining BM25 and Qdrant dense vector search.
 
@@ -354,9 +364,9 @@ class Retriever:
             from sentence_transformers import SentenceTransformer  # noqa: PLC0415
 
             model_name = os.getenv("LIFELOG_TEXT_EMBEDDING_MODEL", "intfloat/e5-large-v2")
-            # Lazily load and cache
+            # Lazily load and cache (on GPU when available)
             if not hasattr(self, "_text_model") or self._text_model_name != model_name:
-                self._text_model = SentenceTransformer(model_name)
+                self._text_model = SentenceTransformer(model_name, device=_torch_device())
                 self._text_model_name = model_name
 
             # e5 models need query prefix
@@ -380,6 +390,8 @@ class Retriever:
                 model_name, pretrained=pretrained
             )
             self._clip_tokenizer = open_clip.get_tokenizer(model_name)
+            self._clip_device = _torch_device()
+            self._clip_model.to(self._clip_device)
             self._clip_model.eval()
             return True
         except Exception as exc:  # noqa: BLE001
@@ -393,11 +405,11 @@ class Retriever:
         try:
             import torch  # noqa: PLC0415
 
-            tokens = self._clip_tokenizer([query])
+            tokens = self._clip_tokenizer([query]).to(self._clip_device)
             with torch.no_grad():
                 vec = self._clip_model.encode_text(tokens)
                 vec = vec / vec.norm(dim=-1, keepdim=True)
-            return vec[0].tolist()
+            return vec[0].cpu().tolist()
         except Exception as exc:  # noqa: BLE001
             logger.debug("CLIP text embedding failed: %s", exc)
             return None
@@ -411,11 +423,11 @@ class Retriever:
             from PIL import Image  # noqa: PLC0415
 
             image = Image.open(path).convert("RGB")
-            tensor = self._clip_preprocess(image).unsqueeze(0)
+            tensor = self._clip_preprocess(image).unsqueeze(0).to(self._clip_device)
             with torch.no_grad():
                 vec = self._clip_model.encode_image(tensor)
                 vec = vec / vec.norm(dim=-1, keepdim=True)
-            return vec[0].tolist()
+            return vec[0].cpu().tolist()
         except Exception as exc:  # noqa: BLE001
             logger.debug("CLIP image embedding failed: %s", exc)
             return None
