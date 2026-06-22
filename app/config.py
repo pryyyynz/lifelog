@@ -132,6 +132,7 @@ class EnrichmentConfig:
     enabled: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENABLE_ENRICHMENT", False))
     ocr: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENRICH_OCR", True))
     caption: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENRICH_CAPTION", False))
+    vlm: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENRICH_VLM", False))
     tags: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENRICH_TAGS", False))
     action: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENRICH_ACTION", False))
     faces: bool = field(default_factory=lambda: _bool_from_env("LIFELOG_ENRICH_FACES", False))
@@ -141,6 +142,8 @@ class EnrichmentConfig:
     )
     # Captioning (Phase 1)
     caption_model: str = os.getenv("LIFELOG_CAPTION_MODEL", "Salesforce/blip-image-captioning-base")
+    # VLM captioner (reads + describes; richer than BLIP). GPU recommended.
+    vlm_model: str = os.getenv("LIFELOG_VLM_MODEL", "Qwen/Qwen2-VL-2B-Instruct")
     # Zero-shot tags (Phase 1) — reuses the OpenCLIP image model by default.
     tag_model: str = os.getenv("LIFELOG_TAG_MODEL", "ViT-L-14")
     tag_pretrained: str = os.getenv("LIFELOG_TAG_PRETRAINED", "openai")

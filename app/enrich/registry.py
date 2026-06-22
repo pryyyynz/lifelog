@@ -25,6 +25,11 @@ def build_enrichers(config: AppConfig | None = None) -> list[Enricher]:
 
         enrichers.append(CaptionEnricher(model_name=enr.caption_model))
 
+    if enr.vlm:
+        from app.enrich.vlm import VlmEnricher  # noqa: PLC0415
+
+        enrichers.append(VlmEnricher(model_name=enr.vlm_model))
+
     if enr.tags:
         from app.enrich.tags import TagEnricher  # noqa: PLC0415
 
