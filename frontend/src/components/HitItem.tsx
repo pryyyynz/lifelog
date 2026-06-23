@@ -31,6 +31,10 @@ export default function HitItem({ hit, isPrimary = false }: HitItemProps) {
     : null;
   const fileName = hit.file_path.split(/[\\/]/).pop();
   const rationale = (hit.rationale ?? []).slice(0, 2).filter(Boolean);
+  // For media, the snippet is the behind-the-scenes OCR/VLM description used for
+  // search — show the media itself, not that caption.
+  const isMedia =
+    hit.preview_type === 'image' || hit.preview_type === 'video' || hit.preview_type === 'audio';
 
   return (
     <div
@@ -46,7 +50,7 @@ export default function HitItem({ hit, isPrimary = false }: HitItemProps) {
         </span>
 
         <div className="min-w-0 flex-1 space-y-2">
-          {hit.snippet && (
+          {hit.snippet && !isMedia && (
             <p className="text-sm leading-relaxed text-gray-200 line-clamp-4">{hit.snippet}</p>
           )}
 

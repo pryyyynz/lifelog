@@ -817,26 +817,38 @@ def select_local_path(request: LocalPathSelectRequest) -> LocalPathSelectRespons
     return LocalPathSelectResponse(path=_select_local_path(source_type, request.target))
 
 
-_COUNT_RE = re.compile(r"\b(how many|how much|number of|count of|total number)\b", re.IGNORECASE)
+_COUNT_RE = re.compile(
+    r"\b(how many|how much|number of|count of|total (?:number|count)|\w+\s+count|count|tally)\b",
+    re.IGNORECASE,
+)
 _COUNT_MODALITY_WORDS: dict[str, tuple[str, ...]] = {
     "photo": ("photo", "photos", "picture", "pictures", "image", "images", "screenshot", "screenshots"),
     "video": ("video", "videos", "clip", "clips", "recording", "recordings"),
-    "text": ("document", "documents", "note", "notes", "doc", "docs", "markdown", "file", "files"),
+    "text": ("document", "documents", "note", "notes", "doc", "docs", "markdown"),
     "audio": ("audio", "voice", "podcast", "song", "songs"),
 }
 _COUNT_LABELS = {"photo": "photos", "video": "videos", "text": "documents", "audio": "audio files"}
 
 
 def _maybe_count_answer(query: str, store: MetadataStore) -> str | None:
-    """Answer a 'how many X' question from DB item counts instead of retrieving.
+    """Answer an aggregate 'how many X' question from DB item counts, not retrieval.
 
-    Retrieval can't aggregate, so meta questions used to return noisy CLIP hits.
-    Counts are by distinct file, so "how many videos" returns 3, not 30 chunks.
+    Returns a text-only answer (the caller sends no media cards). Counts are by
+    distinct file, so "how many videos" returns 3, not 30 chunks.
     """
     if not _COUNT_RE.search(query):
         return None
     counts = store.file_counts_by_source_type()
     ql = query.lower()
+    # "media" → photos + videos + audio combined
+    if re.search(r"\bmedia\b", ql):
+        media = sum(counts.get(k, 0) for k in ("photo", "video", "audio"))
+        bits = [
+            f"{counts.get(k, 0):,} {_COUNT_LABELS[k]}"
+            for k in ("photo", "video", "audio")
+            if counts.get(k, 0)
+        ]
+        return f"You have {media:,} media items" + (" — " + ", ".join(bits) if bits else "") + "."
     for canonical, words in _COUNT_MODALITY_WORDS.items():
         if any(re.search(rf"\b{re.escape(word)}\b", ql) for word in words):
             return f"You have {counts.get(canonical, 0):,} {_COUNT_LABELS[canonical]} indexed."
