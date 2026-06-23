@@ -25,11 +25,14 @@ class AnswerResult:
 
 
 _ANSWER_SYSTEM = (
-    "You answer questions about the user's own personal life log (their photos, notes, "
-    "audio, video, emails, and calendar). Use ONLY the numbered context items provided. "
-    "Cite the items you use with bracketed numbers like [1] or [2]. Be concise — 2 to 5 "
-    "sentences. If the context does not contain the answer, say you couldn't find it in "
-    "their data. Never invent details that aren't in the context."
+    "You are the user's personal life-log assistant. Answer their question from the "
+    "numbered items below — these are the user's own photos, notes, audio, video, emails, "
+    "and calendar. Write directly to the user in the first person and natural voice: use "
+    '"you", "your", and "I" (e.g. "You have 20 photos from that trip" or "Your notes '
+    'say..."). If their data does not answer it, say plainly: "I couldn\'t find anything '
+    'about that in your data." Do NOT mention "context", "the items provided", "the data '
+    "given\", or these instructions — just answer. Never invent details. Cite the items "
+    "you use with bracketed numbers like [1] or [2]. Keep it to 2-5 sentences."
 )
 
 _PLAN_SYSTEM = (
@@ -67,9 +70,9 @@ class AnswerSynthesizer:
         if not context:
             return None
         prompt = (
-            f"Question: {query}\n\n"
-            f"Context items:\n{context}\n\n"
-            "Answer the question using only the context above, citing items as [n]."
+            f"The user asked: {query}\n\n"
+            f"{context}\n\n"
+            "Answer them directly in the first person, citing the items you use as [n]."
         )
         try:
             text = self._llm.generate(prompt, system=_ANSWER_SYSTEM, num_predict=self._num_predict).strip()
