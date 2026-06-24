@@ -12,9 +12,6 @@ interface SessionCardProps {
 
 export default function SessionCard({ card }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const score = Number.isFinite(card.score)
-    ? Math.max(0, Math.min(100, card.score * 100))
-    : null;
 
   const startDate = card.start_utc
     ? new Date(card.start_utc).toLocaleDateString(undefined, {
@@ -74,11 +71,6 @@ export default function SessionCard({ card }: SessionCardProps) {
               );
             })}
           </div>
-          {score !== null && score > 0 && (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-gray-400">
-              {score.toFixed(0)}% match
-            </span>
-          )}
         </div>
       </div>
 

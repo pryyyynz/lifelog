@@ -545,7 +545,7 @@ export default function Home() {
         const response = await runQuery({
           query,
           filters,
-          top_k: 5,
+          top_k: 4,
           conversation_id: conversationId,
           chronological,
         });
@@ -575,7 +575,7 @@ export default function Home() {
         const response = await runImageQuery({
           image,
           query: query || undefined,
-          top_k: 5,
+          top_k: 4,
           conversation_id: conversationId,
         });
         applyTurnResponse(targetChatId, turnId, response);

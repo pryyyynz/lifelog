@@ -829,6 +829,10 @@ _COUNT_MODALITY_WORDS: dict[str, tuple[str, ...]] = {
 }
 _COUNT_LABELS = {"photo": "photos", "video": "videos", "text": "documents", "audio": "audio files"}
 
+# Only present result cards scoring within this fraction of the top card, so a
+# few strong matches show instead of a long weak tail.
+_RESULT_SCORE_RATIO = float(os.getenv("LIFELOG_RESULT_SCORE_RATIO", "0.5"))
+
 
 def _maybe_count_answer(query: str, store: MetadataStore) -> str | None:
     """Answer an aggregate 'how many X' question from DB item counts, not retrieval.
@@ -1005,6 +1009,14 @@ def post_query(request: QueryRequest) -> QueryResponse:
         _session_grouper._top_n = request.top_k  # type: ignore[misc]
         cards = _session_grouper.group(hits)
         _session_grouper._top_n = top_n_cards  # type: ignore[misc]
+
+    # Raise the bar: keep only cards close to the best match so a few strong
+    # results show instead of a long weak tail. (Skip for chronological mode,
+    # which is intentionally ordered by time, not score.)
+    if cards and not request.chronological:
+        ranked = sorted(cards, key=lambda c: c.score, reverse=True)
+        cutoff = ranked[0].score * _RESULT_SCORE_RATIO
+        cards = [card for card in ranked if card.score >= cutoff]
 
     # Synthesize a grounded, cited answer from the top cards (Phase 3).
     answer_text: str | None = None

@@ -26,11 +26,6 @@ export default function HitItem({ hit, isPrimary = false }: HitItemProps) {
     }
   };
 
-  const time = hit.timestamp_utc
-    ? new Date(hit.timestamp_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : null;
-  const fileName = hit.file_path.split(/[\\/]/).pop();
-  const rationale = (hit.rationale ?? []).slice(0, 2).filter(Boolean);
   // For media, the snippet is the behind-the-scenes OCR/VLM description used for
   // search — show the media itself, not that caption.
   const isMedia =
@@ -55,18 +50,6 @@ export default function HitItem({ hit, isPrimary = false }: HitItemProps) {
           )}
 
           <MediaPreview hit={hit} onOpenOriginal={handleOpen} />
-
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
-            <span className={`rounded-full px-2 py-0.5 ${meta.bg} ${meta.text}`}>{meta.label}</span>
-            {time && <span>{time}</span>}
-            {hit.place_name && <span>· {hit.place_name}</span>}
-            {fileName && (
-              <span className="max-w-[12rem] truncate" title={hit.file_path}>
-                · {fileName}
-              </span>
-            )}
-            {rationale.length > 0 && <span className="text-gray-600">· {rationale.join(', ')}</span>}
-          </div>
         </div>
 
         <button
