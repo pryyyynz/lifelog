@@ -1,0 +1,84 @@
+<svg viewBox="0 0 1240 600" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title>Local model suite</title>
+  <desc>A table of the local model lineup. Columns: job, model, output. Rows: text in images uses RapidOCR for a searchable text chunk; scene description uses BLIP for a caption chunk; objects and scenes use OpenCLIP zero-shot for a tag chunk; video actions use X-CLIP for an action chunk; rich description uses Qwen2-VL-2B for a description chunk; faces use InsightFace for face embeddings and clusters; text and image embeddings use e5-large-v2 and OpenCLIP ViT-L-14 for vectors; answers, planning and chat use qwen3:8b via Ollama for text.</desc>
+  <style>
+    .h1{fill:#16203a;font-size:25px;font-weight:700}
+    .h2{fill:#5b6675;font-size:15px}
+    .th{fill:#5b6675;font-size:13px;font-weight:700;letter-spacing:1px}
+    .c1{fill:#16203a;font-size:15px;font-weight:600}
+    .c2{fill:#16203a;font-size:15px}
+    .c3{fill:#5b6675;font-size:15px}
+  </style>
+
+  <rect x="0" y="0" width="1240" height="600" fill="#ffffff"/>
+  <text class="h1" x="40" y="44">The model lineup — all running locally</text>
+  <text class="h2" x="40" y="70">Every capability runs on-device: embeddings, vision, transcription, and the answer LLM.</text>
+
+  <!-- table frame -->
+  <rect x="40" y="100" width="1140" height="468" rx="12" fill="#ffffff" stroke="#cdd5e0" stroke-width="1.5"/>
+
+  <!-- striped rows (1,3,5,7) -->
+  <rect x="41.5" y="152" width="1137" height="52" fill="#f7f9fb"/>
+  <rect x="41.5" y="256" width="1137" height="52" fill="#f7f9fb"/>
+  <rect x="41.5" y="360" width="1137" height="52" fill="#f7f9fb"/>
+  <rect x="41.5" y="464" width="1137" height="52" fill="#f7f9fb"/>
+
+  <!-- header band with rounded top corners -->
+  <path d="M52,100 H1168 A12,12 0 0 1 1180,112 V152 H40 V112 A12,12 0 0 1 52,100 Z" fill="#eef1f5"/>
+
+  <!-- row dividers -->
+  <g stroke="#e9edf2" stroke-width="1">
+    <line x1="40" y1="204" x2="1180" y2="204"/>
+    <line x1="40" y1="256" x2="1180" y2="256"/>
+    <line x1="40" y1="308" x2="1180" y2="308"/>
+    <line x1="40" y1="360" x2="1180" y2="360"/>
+    <line x1="40" y1="412" x2="1180" y2="412"/>
+    <line x1="40" y1="464" x2="1180" y2="464"/>
+    <line x1="40" y1="516" x2="1180" y2="516"/>
+  </g>
+  <line x1="40" y1="152" x2="1180" y2="152" stroke="#d6dde6" stroke-width="1.5"/>
+
+  <!-- column dividers -->
+  <g stroke="#e9edf2" stroke-width="1">
+    <line x1="420" y1="100" x2="420" y2="568"/>
+    <line x1="840" y1="100" x2="840" y2="568"/>
+  </g>
+
+  <!-- header labels -->
+  <text class="th" x="58" y="131">JOB</text>
+  <text class="th" x="438" y="131">MODEL</text>
+  <text class="th" x="858" y="131">OUTPUT</text>
+
+  <!-- rows -->
+  <text class="c1" x="58" y="183">Text in images</text>
+  <text class="c2" x="438" y="183">RapidOCR</text>
+  <text class="c3" x="858" y="183">searchable text chunk</text>
+
+  <text class="c1" x="58" y="235">Scene description</text>
+  <text class="c2" x="438" y="235">BLIP</text>
+  <text class="c3" x="858" y="235">caption chunk</text>
+
+  <text class="c1" x="58" y="287">Objects &amp; scenes</text>
+  <text class="c2" x="438" y="287">OpenCLIP (zero-shot)</text>
+  <text class="c3" x="858" y="287">tag chunk</text>
+
+  <text class="c1" x="58" y="339">Video actions</text>
+  <text class="c2" x="438" y="339">X-CLIP</text>
+  <text class="c3" x="858" y="339">action chunk</text>
+
+  <text class="c1" x="58" y="391">Rich description</text>
+  <text class="c2" x="438" y="391">Qwen2-VL-2B (VLM)</text>
+  <text class="c3" x="858" y="391">description chunk</text>
+
+  <text class="c1" x="58" y="443">Faces</text>
+  <text class="c2" x="438" y="443">InsightFace</text>
+  <text class="c3" x="858" y="443">face embeddings → clusters</text>
+
+  <text class="c1" x="58" y="495">Text &amp; image embeddings</text>
+  <text class="c2" x="438" y="495">e5-large-v2, OpenCLIP ViT-L-14</text>
+  <text class="c3" x="858" y="495">vectors</text>
+
+  <text class="c1" x="58" y="547">Answers, planning, chat</text>
+  <text class="c2" x="438" y="547">qwen3:8b via Ollama</text>
+  <text class="c3" x="858" y="547">text</text>
+</svg>

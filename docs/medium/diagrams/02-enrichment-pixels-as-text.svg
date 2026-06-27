@@ -1,0 +1,117 @@
+<svg viewBox="0 0 1300 640" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title>Describe pixels as text — the enrichment pipeline</title>
+  <desc>An image or video frame fans out to six local vision models (OCR, caption, tags, action, VLM, faces). Each emits a derived text chunk that converges into one unified text-embedding pipeline (e5 plus BM25) stored in Qdrant and SQLite. A separate CLIP path produces image vectors for pure visual similarity.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8a95a5"/>
+    </marker>
+  </defs>
+  <style>
+    .h1{fill:#16203a;font-size:25px;font-weight:700}
+    .h2{fill:#5b6675;font-size:15px}
+    .box{fill:#f4f6f9;stroke:#cdd5e0;stroke-width:1.5}
+    .accent{fill:#e9edfb;stroke:#aebdf2;stroke-width:1.5}
+    .green{fill:#e8f6ef;stroke:#9bd9bf;stroke-width:1.5}
+    .lbl{fill:#16203a;font-size:16px;font-weight:600;text-anchor:middle}
+    .lblL{fill:#16203a;font-size:15px;font-weight:600}
+    .sub{fill:#5b6675;font-size:12.5px}
+    .subC{fill:#5b6675;font-size:12.5px;text-anchor:middle}
+    .edge{stroke:#8a95a5;stroke-width:1.8;fill:none;marker-end:url(#arrow)}
+    .edgeM{stroke:#aebdf2;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    .leg{fill:#5b6675;font-size:13px}
+  </style>
+
+  <rect x="0" y="0" width="1300" height="640" fill="#ffffff"/>
+  <text class="h1" x="36" y="44">The keystone: “describe pixels as text”</text>
+  <text class="h2" x="36" y="70">Six local vision models turn an image into searchable text chunks that share one retrieval pipeline.</text>
+
+  <!-- source -->
+  <rect class="box" x="36" y="262" width="150" height="96" rx="12"/>
+  <text class="lbl" x="111" y="304">Image /</text>
+  <text class="lbl" x="111" y="326">video frame</text>
+
+  <!-- enrichers -->
+  <g>
+    <rect class="box" x="262" y="96" width="232" height="56" rx="10"/>
+    <text class="lblL" x="278" y="120">OCR · RapidOCR</text>
+    <text class="sub" x="278" y="140">text inside the image</text>
+
+    <rect class="box" x="262" y="166" width="232" height="56" rx="10"/>
+    <text class="lblL" x="278" y="190">Caption · BLIP</text>
+    <text class="sub" x="278" y="210">scene description</text>
+
+    <rect class="box" x="262" y="236" width="232" height="56" rx="10"/>
+    <text class="lblL" x="278" y="260">Tags · OpenCLIP zero-shot</text>
+    <text class="sub" x="278" y="280">objects &amp; scenes</text>
+
+    <rect class="box" x="262" y="306" width="232" height="56" rx="10"/>
+    <text class="lblL" x="278" y="330">Action · X-CLIP</text>
+    <text class="sub" x="278" y="350">what’s happening (video)</text>
+
+    <rect class="box" x="262" y="376" width="232" height="56" rx="10"/>
+    <text class="lblL" x="278" y="400">VLM · Qwen2-VL-2B</text>
+    <text class="sub" x="278" y="420">detailed description</text>
+
+    <rect class="box" x="262" y="446" width="232" height="56" rx="10"/>
+    <text class="lblL" x="278" y="470">Faces · InsightFace</text>
+    <text class="sub" x="278" y="490">who is in it → person:&lt;id&gt;</text>
+  </g>
+
+  <!-- converge -->
+  <rect class="accent" x="560" y="190" width="190" height="218" rx="12"/>
+  <text class="lbl" x="655" y="280">Derived</text>
+  <text class="lbl" x="655" y="302">text chunks</text>
+  <text class="subC" x="655" y="330">tagged</text>
+  <text class="subC" x="655" y="348">derived_from</text>
+
+  <!-- embed -->
+  <rect class="accent" x="800" y="226" width="180" height="146" rx="12"/>
+  <text class="lbl" x="890" y="288">e5 embedding</text>
+  <text class="subC" x="890" y="312">+ BM25 keyword</text>
+  <text class="subC" x="890" y="338">one text pipeline</text>
+
+  <!-- store -->
+  <rect class="green" x="1030" y="226" width="232" height="146" rx="12"/>
+  <text class="lbl" x="1146" y="284">text_chunks</text>
+  <text class="subC" x="1146" y="308">Qdrant vectors</text>
+  <text class="subC" x="1146" y="332">+ SQLite metadata</text>
+  <text class="subC" x="1146" y="356">searchable by meaning</text>
+
+  <!-- CLIP lane -->
+  <rect class="box" x="262" y="540" width="232" height="58" rx="10"/>
+  <text class="lblL" x="278" y="566">CLIP image embedding</text>
+  <text class="sub" x="278" y="586">no text — raw pixels</text>
+  <rect class="green" x="560" y="540" width="190" height="58" rx="10"/>
+  <text class="lbl" x="655" y="566" style="font-size:15px">image vectors</text>
+  <text class="subC" x="655" y="586">visual similarity</text>
+
+  <!-- fan-out edges -->
+  <path class="edge" d="M186,300 C220,250 230,150 260,124"/>
+  <path class="edge" d="M186,302 C220,270 230,210 260,194"/>
+  <path class="edge" d="M186,308 L258,264"/>
+  <path class="edge" d="M186,318 L258,334"/>
+  <path class="edge" d="M186,326 C220,360 230,408 260,404"/>
+  <path class="edge" d="M186,330 C220,400 230,470 260,474"/>
+
+  <!-- converge edges -->
+  <path class="edgeM" d="M494,124 C520,150 532,250 558,288"/>
+  <path class="edgeM" d="M494,194 C520,210 532,270 558,292"/>
+  <path class="edgeM" d="M494,264 L558,296"/>
+  <path class="edgeM" d="M494,334 L558,300"/>
+  <path class="edgeM" d="M494,404 C520,400 532,330 558,304"/>
+  <path class="edgeM" d="M494,474 C520,450 532,340 558,308"/>
+
+  <path class="edge" d="M750,300 L798,300"/>
+  <path class="edge" d="M980,299 L1028,299"/>
+
+  <!-- CLIP edges -->
+  <path class="edge" d="M120,358 C120,470 180,560 260,568"/>
+  <path class="edge" d="M494,568 L558,568"/>
+
+  <!-- legend -->
+  <rect x="800" y="470" width="16" height="16" rx="4" class="accent"/>
+  <text class="leg" x="824" y="483">compute / derived</text>
+  <rect x="800" y="496" width="16" height="16" rx="4" class="green"/>
+  <text class="leg" x="824" y="509">persistent storage</text>
+  <text class="leg" x="800" y="540" style="font-style:italic">All models run locally, one at a time, on an 8 GB GPU.</text>
+</svg>

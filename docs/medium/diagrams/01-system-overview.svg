@@ -1,0 +1,86 @@
+<svg viewBox="0 0 1320 540" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title>Life Log Search system overview</title>
+  <desc>Personal data sources flow through ingest, enrichment, embeddings and local storage into a hybrid retrieval and RAG layer surfaced in a web UI, all inside a privacy boundary labelled "your machine".</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8a95a5"/>
+    </marker>
+  </defs>
+  <style>
+    .bg{fill:#ffffff}
+    .h1{fill:#16203a;font-size:26px;font-weight:700}
+    .h2{fill:#5b6675;font-size:15px}
+    .box{fill:#f4f6f9;stroke:#cdd5e0;stroke-width:1.5;rx:12}
+    .accent{fill:#e9edfb;stroke:#aebdf2;stroke-width:1.5}
+    .green{fill:#e8f6ef;stroke:#9bd9bf;stroke-width:1.5}
+    .lbl{fill:#16203a;font-size:17px;font-weight:600;text-anchor:middle}
+    .sub{fill:#5b6675;font-size:13px;text-anchor:middle}
+    .li{fill:#3a4458;font-size:14px}
+    .edge{stroke:#8a95a5;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    .bound{fill:none;stroke:#2f9e6f;stroke-width:2;stroke-dasharray:8 6;rx:18}
+    .boundlbl{fill:#2f9e6f;font-size:14px;font-weight:700;letter-spacing:1px}
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1320" height="540"/>
+  <text class="h1" x="40" y="46">Life Log Search — one search box over your whole digital life</text>
+  <text class="h2" x="40" y="72">Local-first multimodal retrieval. Nothing leaves the device.</text>
+
+  <!-- privacy boundary -->
+  <rect class="bound" x="24" y="96" width="1272" height="404"/>
+  <rect x="24" y="96" width="270" height="26" fill="#2f9e6f"/>
+  <text class="boundlbl" x="38" y="114" fill="#ffffff">YOUR MACHINE · STRICTLY LOCAL</text>
+
+  <!-- Sources -->
+  <rect class="box" x="44" y="150" width="158" height="296" rx="12"/>
+  <text class="lbl" x="123" y="178">Sources</text>
+  <line x1="60" y1="190" x2="186" y2="190" stroke="#cdd5e0"/>
+  <g fill="#8a95a5"><circle cx="68" cy="212" r="3.5"/><circle cx="68" cy="242" r="3.5"/><circle cx="68" cy="272" r="3.5"/><circle cx="68" cy="302" r="3.5"/><circle cx="68" cy="332" r="3.5"/><circle cx="68" cy="362" r="3.5"/><circle cx="68" cy="392" r="3.5"/></g>
+  <text class="li" x="82" y="217">Journals / notes</text>
+  <text class="li" x="82" y="247">Photos</text>
+  <text class="li" x="82" y="277">Audio</text>
+  <text class="li" x="82" y="307">Video</text>
+  <text class="li" x="82" y="337">Email</text>
+  <text class="li" x="82" y="367">Calendar</text>
+  <text class="li" x="82" y="397">Browser history</text>
+
+  <!-- Ingest + Enrich -->
+  <rect class="box" x="236" y="232" width="176" height="132" rx="12"/>
+  <text class="lbl" x="324" y="284">Ingest + Enrich</text>
+  <text class="sub" x="324" y="308">normalize · chunk</text>
+  <text class="sub" x="324" y="326">describe pixels as text</text>
+
+  <!-- Embeddings -->
+  <rect class="box" x="446" y="232" width="156" height="132" rx="12"/>
+  <text class="lbl" x="524" y="284">Embeddings</text>
+  <text class="sub" x="524" y="308">e5 · CLIP</text>
+  <text class="sub" x="524" y="326">Whisper</text>
+
+  <!-- Storage -->
+  <rect class="box" x="636" y="210" width="186" height="176" rx="12"/>
+  <text class="lbl" x="729" y="240">Storage</text>
+  <rect class="accent" x="654" y="256" width="150" height="48" rx="9"/>
+  <text class="lbl" x="729" y="280" style="font-size:15px">Qdrant</text>
+  <text class="sub" x="729" y="297">vectors</text>
+  <rect class="green" x="654" y="318" width="150" height="48" rx="9"/>
+  <text class="lbl" x="729" y="342" style="font-size:15px">SQLite</text>
+  <text class="sub" x="729" y="359">metadata</text>
+
+  <!-- Retrieval + RAG -->
+  <rect class="accent" x="856" y="232" width="186" height="132" rx="12"/>
+  <text class="lbl" x="949" y="278">Retrieval + RAG</text>
+  <text class="sub" x="949" y="302">hybrid search</text>
+  <text class="sub" x="949" y="320">cited answers</text>
+
+  <!-- Web UI -->
+  <rect class="box" x="1076" y="232" width="146" height="132" rx="12"/>
+  <text class="lbl" x="1149" y="284">Web UI</text>
+  <text class="sub" x="1149" y="308">chat · cards</text>
+  <text class="sub" x="1149" y="326">PWA</text>
+
+  <!-- edges -->
+  <path class="edge" d="M202,298 L232,298"/>
+  <path class="edge" d="M412,298 L442,298"/>
+  <path class="edge" d="M602,298 L632,298"/>
+  <path class="edge" d="M822,298 L852,298"/>
+  <path class="edge" d="M1042,298 L1072,298"/>
+</svg>

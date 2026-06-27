@@ -1,0 +1,89 @@
+<svg viewBox="0 0 1280 540" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title>One 8 GB GPU, shared by taking turns</title>
+  <desc>A single GPU timeline. A low-priority background enrichment pass (VLM, OCR, captions) runs until a query arrives. The query-in-progress gate makes enrichment yield; the GPU then loads retrieval and reranking models, then the Ollama LLM to synthesize an answer, then enrichment resumes. Only one model is resident at a time.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8a95a5"/>
+    </marker>
+  </defs>
+  <style>
+    .h1{fill:#16203a;font-size:25px;font-weight:700}
+    .h2{fill:#5b6675;font-size:15px}
+    .enr{fill:#eef1f5;stroke:#cdd5e0;stroke-width:1.5}
+    .qry{fill:#e9edfb;stroke:#aebdf2;stroke-width:1.5}
+    .segT{fill:#16203a;font-size:15px;font-weight:600;text-anchor:middle}
+    .segS{fill:#5b6675;font-size:12.5px;text-anchor:middle}
+    .pause{stroke:#16203a;stroke-width:1.6;stroke-dasharray:5 5}
+    .call{fill:#16203a;font-size:13px;font-weight:600}
+    .callS{fill:#5b6675;font-size:12.5px}
+    .leg{fill:#5b6675;font-size:13px}
+    .axis{stroke:#8a95a5;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+  </style>
+
+  <rect x="0" y="0" width="1280" height="540" fill="#ffffff"/>
+  <text class="h1" x="36" y="44">One 8 GB GPU — the models take turns</text>
+  <text class="h2" x="36" y="70">Vision, embeddings and the LLM can’t all stay resident, so a query preempts the background enrichment pass.</text>
+
+  <!-- GPU label -->
+  <text x="36" y="252" class="call" style="font-size:15px">GPU</text>
+  <text x="36" y="272" class="callS">8 GB VRAM</text>
+  <text x="36" y="290" class="callS">1 model</text>
+  <text x="36" y="306" class="callS">resident</text>
+
+  <!-- timeline lane segments -->
+  <!-- enrich 1 -->
+  <rect class="enr" x="120" y="216" width="252" height="104" rx="10"/>
+  <text class="segT" x="246" y="262">Enrich · VLM</text>
+  <text class="segS" x="246" y="282">Qwen2-VL-2B describes photos</text>
+  <text class="segS" x="246" y="302">background · low priority</text>
+  <!-- enrich 2 -->
+  <rect class="enr" x="372" y="216" width="186" height="104" rx="10"/>
+  <text class="segT" x="465" y="262">Enrich · OCR</text>
+  <text class="segS" x="465" y="282">caption · tags</text>
+  <text class="segS" x="465" y="302">background</text>
+
+  <!-- query bracket segments -->
+  <rect class="qry" x="566" y="216" width="246" height="104" rx="10"/>
+  <text class="segT" x="689" y="258">Query · retrieve</text>
+  <text class="segS" x="689" y="278">e5 + CLIP + cross-encoder</text>
+  <text class="segS" x="689" y="298">load → run → free</text>
+
+  <rect class="qry" x="812" y="216" width="212" height="104" rx="10"/>
+  <text class="segT" x="918" y="258">Query · answer</text>
+  <text class="segS" x="918" y="278">Ollama LLM (qwen3:8b)</text>
+  <text class="segS" x="918" y="298">grounded, cited</text>
+
+  <!-- enrich resume -->
+  <rect class="enr" x="1024" y="216" width="170" height="104" rx="10"/>
+  <text class="segT" x="1109" y="262">Enrich · Faces</text>
+  <text class="segS" x="1109" y="282">InsightFace</text>
+  <text class="segS" x="1109" y="302">resumes</text>
+
+  <!-- pause markers -->
+  <line class="pause" x1="562" y1="120" x2="562" y2="330"/>
+  <line class="pause" x1="1024" y1="120" x2="1024" y2="330"/>
+
+  <!-- callout 1 -->
+  <text class="call" x="566" y="146">① Query arrives</text>
+  <text class="callS" x="566" y="166">_query_in_progress = true</text>
+  <text class="callS" x="566" y="184">→ enrichment yields the GPU</text>
+
+  <!-- callout 2 over query bracket -->
+  <text class="call" x="689" y="364" text-anchor="middle">② One model at a time</text>
+  <text class="callS" x="795" y="384" text-anchor="middle">retrieve → rerank → synthesize the answer</text>
+
+  <!-- callout 3 -->
+  <text class="call" x="1028" y="146">③ Answer sent</text>
+  <text class="callS" x="1028" y="166">enrichment resumes</text>
+  <text class="callS" x="1028" y="184">where it left off</text>
+
+  <!-- time axis -->
+  <path class="axis" d="M120,420 L1180,420"/>
+  <text class="leg" x="120" y="442">time →</text>
+
+  <!-- legend -->
+  <rect x="900" y="470" width="16" height="16" rx="4" class="enr"/>
+  <text class="leg" x="924" y="483">background enrichment</text>
+  <rect x="1100" y="470" width="16" height="16" rx="4" class="qry"/>
+  <text class="leg" x="1124" y="483">live query (preempts)</text>
+</svg>

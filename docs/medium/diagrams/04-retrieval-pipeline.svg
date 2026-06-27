@@ -1,0 +1,102 @@
+<svg viewBox="0 0 1300 620" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title>Hybrid retrieval and RAG pipeline</title>
+  <desc>A query is analysed and optionally decomposed into sub-queries, then run through three parallel retrieval paths: BM25 sparse, dense e5 semantic, and CLIP visual. Results are merged with reciprocal-rank fusion, adjusted by a temporal boost, reranked by a cross-encoder, grouped into session cards, and synthesised into a grounded, cited answer shown in the UI.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8a95a5"/>
+    </marker>
+  </defs>
+  <style>
+    .h1{fill:#16203a;font-size:25px;font-weight:700}
+    .h2{fill:#5b6675;font-size:15px}
+    .box{fill:#f4f6f9;stroke:#cdd5e0;stroke-width:1.5}
+    .accent{fill:#e9edfb;stroke:#aebdf2;stroke-width:1.5}
+    .green{fill:#e8f6ef;stroke:#9bd9bf;stroke-width:1.5}
+    .lbl{fill:#16203a;font-size:15.5px;font-weight:600;text-anchor:middle}
+    .sub{fill:#5b6675;font-size:12.5px;text-anchor:middle}
+    .edge{stroke:#8a95a5;stroke-width:1.8;fill:none;marker-end:url(#arrow)}
+    .note{fill:#5b6675;font-size:12.5px;font-style:italic}
+    .step{fill:#3858c9;font-size:13px;font-weight:700}
+  </style>
+
+  <rect x="0" y="0" width="1300" height="620" fill="#ffffff"/>
+  <text class="h1" x="36" y="44">From question to cited answer</text>
+  <text class="h2" x="36" y="70">Three retrieval paths, fused and reranked — then the LLM only summarises what was actually found.</text>
+
+  <!-- Query -->
+  <rect class="box" x="36" y="176" width="132" height="78" rx="12"/>
+  <text class="lbl" x="102" y="212">Query</text>
+  <text class="sub" x="102" y="232">natural language</text>
+
+  <!-- Analysis -->
+  <rect class="box" x="196" y="166" width="186" height="98" rx="12"/>
+  <text class="lbl" x="289" y="200">Query analysis</text>
+  <text class="sub" x="289" y="222">intent · time &amp; place</text>
+  <text class="sub" x="289" y="240">decompose ≤3 sub-queries</text>
+
+  <!-- 3 retrieval lanes -->
+  <rect class="box" x="424" y="92" width="196" height="62" rx="10"/>
+  <text class="lbl" x="522" y="118">BM25 — sparse</text>
+  <text class="sub" x="522" y="138">keyword · stopword-aware</text>
+
+  <rect class="box" x="424" y="184" width="196" height="62" rx="10"/>
+  <text class="lbl" x="522" y="210">e5 — dense</text>
+  <text class="sub" x="522" y="230">semantic text &amp; transcripts</text>
+
+  <rect class="box" x="424" y="276" width="196" height="62" rx="10"/>
+  <text class="lbl" x="522" y="302">CLIP — visual</text>
+  <text class="sub" x="522" y="322">image similarity</text>
+
+  <!-- RRF fusion -->
+  <rect class="accent" x="664" y="166" width="160" height="98" rx="12"/>
+  <text class="lbl" x="744" y="204">RRF fusion</text>
+  <text class="sub" x="744" y="226">merge ranked lists</text>
+  <text class="sub" x="744" y="244">by reciprocal rank</text>
+
+  <!-- edges row1 -->
+  <path class="edge" d="M168,215 L194,215"/>
+  <path class="edge" d="M382,210 C400,150 405,124 422,124"/>
+  <path class="edge" d="M382,214 L422,214"/>
+  <path class="edge" d="M382,220 C400,290 405,306 422,306"/>
+  <path class="edge" d="M620,124 C640,150 648,200 662,210"/>
+  <path class="edge" d="M620,214 L662,214"/>
+  <path class="edge" d="M620,306 C640,290 648,230 662,220"/>
+
+  <!-- connector to row 2 -->
+  <path class="edge" d="M744,264 L744,376 L250,376 L250,404"/>
+  <text class="step" x="497" y="368" text-anchor="middle">rank &amp; answer</text>
+
+  <!-- row 2 -->
+  <rect class="box" x="162" y="410" width="176" height="96" rx="12"/>
+  <text class="lbl" x="250" y="448">Temporal boost</text>
+  <text class="sub" x="250" y="470">hard date filter</text>
+  <text class="sub" x="250" y="488">+ midpoint boost</text>
+
+  <rect class="box" x="402" y="410" width="176" height="96" rx="12"/>
+  <text class="lbl" x="490" y="448">Cross-encoder</text>
+  <text class="sub" x="490" y="470">rerank as a</text>
+  <text class="sub" x="490" y="488">multiplicative boost</text>
+
+  <rect class="box" x="642" y="410" width="176" height="96" rx="12"/>
+  <text class="lbl" x="730" y="448">Session grouping</text>
+  <text class="sub" x="730" y="470">cluster hits in time</text>
+  <text class="sub" x="730" y="488">→ session cards</text>
+
+  <rect class="accent" x="882" y="410" width="176" height="96" rx="12"/>
+  <text class="lbl" x="970" y="448">RAG answer</text>
+  <text class="sub" x="970" y="470">grounded · cited [n]</text>
+  <text class="sub" x="970" y="488">assistant’s own voice</text>
+
+  <rect class="green" x="1116" y="410" width="150" height="96" rx="12"/>
+  <text class="lbl" x="1191" y="448">UI</text>
+  <text class="sub" x="1191" y="470">answer +</text>
+  <text class="sub" x="1191" y="488">session cards</text>
+
+  <!-- edges row2 -->
+  <path class="edge" d="M338,458 L400,458"/>
+  <path class="edge" d="M578,458 L640,458"/>
+  <path class="edge" d="M818,458 L880,458"/>
+  <path class="edge" d="M1058,458 L1114,458"/>
+
+  <text class="note" x="36" y="566">Everything degrades gracefully: if the LLM is unreachable, the pipeline still returns ranked session cards.</text>
+</svg>

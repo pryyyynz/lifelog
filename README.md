@@ -6,6 +6,8 @@ Life Log Search ingests your journals, photos, audio, video, email, calendar exp
 
 > Ask *"the screenshot with the wifi password,"* *"what did the whiteboard from the brainstorm say?"*, or *"the voice memo where I planned the trip"* — and get the right moment back, across modalities, by what's *in* it rather than its filename.
 
+![Life Log Search system overview — sources are ingested, enriched, embedded and stored locally, then served through a hybrid-retrieval and RAG layer to a web UI, all inside a "your machine" privacy boundary.](docs/medium/diagrams/01-system-overview.png)
+
 ---
 
 ## Highlights
@@ -39,6 +41,12 @@ Life Log Search ingests your journals, photos, audio, video, email, calendar exp
 ```
 
 The core idea is **"describe pixels as text":** rather than maintaining a separate search stack per modality, non-text content is converted into derived text chunks (tagged `derived_from`) that flow into the same embedding-and-ranking pipeline as everything else. Adding a new modality means implementing **one ingestor class** — retrieval never changes.
+
+![Enrichment pipeline — an image fans out to local OCR, captioning, tagging, action, VLM and face models, each producing a derived text chunk that converges into one shared text-embedding pipeline; CLIP keeps a separate visual-similarity lane.](docs/medium/diagrams/02-enrichment-pixels-as-text.png)
+
+A query runs three retrieval paths in parallel — BM25 (sparse), dense e5 (semantic), and CLIP (visual) — merged with reciprocal-rank fusion, refined by a temporal boost and a cross-encoder reranker, then grouped into session cards before a local LLM writes a grounded, cited answer.
+
+![Hybrid retrieval and RAG pipeline — query analysis and decomposition, three parallel retrievers, reciprocal-rank fusion, temporal boost, cross-encoder reranking, session grouping, and a cited answer.](docs/medium/diagrams/04-retrieval-pipeline.png)
 
 Because everything runs on a single consumer GPU, the heavy models **take turns**: enrichment runs as a low-priority background pass that yields the GPU to live queries.
 
@@ -152,4 +160,4 @@ docs/          architecture, product scope, setup notes
 
 ## License
 
-Proprietary — all rights reserved. See `pyproject.toml`.
+Released under the [MIT License](LICENSE) — free for everyone to use, modify, and distribute.

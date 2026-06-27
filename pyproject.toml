@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Local-first multimodal personal search over journals, media, email, calendar, and browser history."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
+license = { text = "MIT" }
 authors = [{ name = "Life Log Search Contributors" }]
 dependencies = [
 ]

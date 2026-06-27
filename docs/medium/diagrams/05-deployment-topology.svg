@@ -1,0 +1,84 @@
+<svg viewBox="0 0 1240 520" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title>Deployment topology and privacy boundary</title>
+  <desc>A phone talks over HTTPS to a Vercel-hosted frontend, which proxies same-origin /api calls through a Cloudflare tunnel to a FastAPI backend running on the user's PC. The PC holds Qdrant, SQLite, local models and personal files inside a privacy boundary. Only query text and results cross the network; personal files never leave the machine. Access is gated by an app password.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8a95a5"/>
+    </marker>
+  </defs>
+  <style>
+    .h1{fill:#16203a;font-size:25px;font-weight:700}
+    .h2{fill:#5b6675;font-size:15px}
+    .box{fill:#f4f6f9;stroke:#cdd5e0;stroke-width:1.5}
+    .accent{fill:#e9edfb;stroke:#aebdf2;stroke-width:1.5}
+    .green{fill:#e8f6ef;stroke:#9bd9bf;stroke-width:1.5}
+    .lbl{fill:#16203a;font-size:15.5px;font-weight:600;text-anchor:middle}
+    .sub{fill:#5b6675;font-size:12.5px;text-anchor:middle}
+    .edge{stroke:#8a95a5;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    .wire{fill:#3858c9;font-size:12.5px;font-weight:600;text-anchor:middle}
+    .bound{fill:none;stroke:#2f9e6f;stroke-width:2;stroke-dasharray:8 6}
+  </style>
+
+  <rect x="0" y="0" width="1240" height="520" fill="#ffffff"/>
+  <text class="h1" x="36" y="44">Reaching it from your phone — without giving up the local model</text>
+  <text class="h2" x="36" y="70">The browser only ever talks to one origin, so there is no CORS or mixed content. Files never leave the PC.</text>
+
+  <!-- phone -->
+  <rect class="box" x="40" y="184" width="124" height="180" rx="18"/>
+  <rect x="54" y="206" width="96" height="120" rx="6" fill="#ffffff" stroke="#cdd5e0"/>
+  <circle cx="102" cy="346" r="7" fill="#cdd5e0"/>
+  <text class="lbl" x="102" y="250">Phone</text>
+  <text class="sub" x="102" y="270">browser</text>
+  <text class="sub" x="102" y="288">+ PWA</text>
+
+  <!-- Vercel -->
+  <rect class="box" x="232" y="214" width="176" height="120" rx="12"/>
+  <text class="lbl" x="320" y="258">Vercel frontend</text>
+  <text class="sub" x="320" y="280">Next.js</text>
+  <text class="sub" x="320" y="300">same-origin /api proxy</text>
+
+  <!-- Cloudflare tunnel -->
+  <rect class="box" x="476" y="214" width="176" height="120" rx="12"/>
+  <text class="lbl" x="564" y="258">Cloudflare tunnel</text>
+  <text class="sub" x="564" y="280">quick tunnel</text>
+  <text class="sub" x="564" y="300">instant HTTPS</text>
+
+  <!-- PC boundary -->
+  <rect class="bound" x="724" y="120" width="486" height="332" rx="16"/>
+  <rect x="724" y="120" width="250" height="26" fill="#2f9e6f"/>
+  <text x="738" y="138" fill="#ffffff" font-size="13.5" font-weight="700" letter-spacing="0.5">YOUR PC · DATA STAYS HERE</text>
+
+  <!-- FastAPI -->
+  <rect class="accent" x="752" y="214" width="168" height="120" rx="12"/>
+  <text class="lbl" x="836" y="262">FastAPI backend</text>
+  <text class="sub" x="836" y="284">the whole engine</text>
+  <text class="sub" x="836" y="304">runs here</text>
+
+  <!-- storage stack -->
+  <rect class="green" x="976" y="160" width="206" height="50" rx="9"/>
+  <text class="lbl" x="1079" y="190" style="font-size:14px">Qdrant — vectors</text>
+  <rect class="green" x="976" y="222" width="206" height="50" rx="9"/>
+  <text class="lbl" x="1079" y="252" style="font-size:14px">SQLite — metadata</text>
+  <rect class="box" x="976" y="284" width="206" height="50" rx="9"/>
+  <text class="lbl" x="1079" y="314" style="font-size:14px">Local models + Ollama</text>
+  <rect class="box" x="976" y="346" width="206" height="50" rx="9"/>
+  <text class="lbl" x="1079" y="376" style="font-size:14px">Personal files</text>
+
+  <!-- edges -->
+  <path class="edge" d="M164,274 L230,274"/>
+  <text class="wire" x="198" y="200">HTTPS</text>
+  <path class="edge" d="M408,274 L474,274"/>
+  <text class="wire" x="441" y="200">BACKEND_URL</text>
+  <path class="edge" d="M652,274 L750,274"/>
+  <text class="wire" x="700" y="200">encrypted</text>
+  <text class="wire" x="700" y="216">tunnel</text>
+
+  <path class="edge" d="M920,250 L974,186"/>
+  <path class="edge" d="M920,262 L974,248"/>
+  <path class="edge" d="M920,290 L974,306"/>
+  <path class="edge" d="M920,300 L974,368"/>
+
+  <!-- auth + privacy notes -->
+  <text x="700" y="248" class="sub" style="fill:#2f9e6f;font-weight:700">🔒 app password</text>
+  <text class="h2" x="36" y="486" style="font-style:italic">Over the wire: only the query and the results — never your photos, journals, or audio.</text>
+</svg>
